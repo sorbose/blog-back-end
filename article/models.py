@@ -20,7 +20,7 @@ class Tag(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=15, primary_key=True)
     describe = models.TextField(null=True)
-    number_with_this = models.IntegerField()
+    number_with_this = models.IntegerField(null=False,default=0)
     def update_number_with_this(self,change):
         self.number_with_this+=change
         self.save()
@@ -32,7 +32,9 @@ class Category(models.Model):
 class Article(models.Model):
     title = models.CharField(max_length=100)
     author = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT)
+    summary = models.TextField(null=True)
     content = models.TextField(null=True)
+    content_HTML = models.TextField(null=True)
     create_time = models.DateTimeField()
     update_time = models.DateTimeField(null=True,default=None)
     category_name = models.ForeignKey('Category', on_delete=models.RESTRICT)

@@ -10,13 +10,14 @@ from django.utils import timezone
 from django.utils.datastructures import MultiValueDictKeyError
 from django.views import View
 from django.core import serializers
+from django.utils.decorators import method_decorator
 import json
 
 import article
 from .models import *
 from account.models import BlogUser
 from django.http.request import HttpRequest
-from django.http.response import HttpResponseForbidden
+from django.http.response import HttpResponseForbidden, HttpResponse
 
 
 # Create your views here.
@@ -28,10 +29,30 @@ def JSONCORS(success: bool, data: dict):
                                             'Access-Control-Allow-Credentials': 'true'})
 
 
+def checkLogin(func):
+    def wrapper(request, *args, **kwargs):
+        is_login = request.user.is_authenticated
+        if is_login:
+            return func(request, *args, **kwargs)
+        else:
+            return HttpResponse('not logged in', status=401)
+
+    return wrapper
+
+def checkAdmin(func):
+    def wrapper(request, *args, **kwargs):
+        is_admin = request.user.is_superuser
+        if is_admin:
+            return func(request, *args, **kwargs)
+        else:
+            return HttpResponse("You're not a super user", status=403)
+
+    return wrapper
+
+
 class TagCreateView(View):
+    @method_decorator(checkLogin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             Tag.objects.create(name=req.GET.get('name'), describe=req.GET.get('desc'))
         except IntegrityError as e:
@@ -40,9 +61,8 @@ class TagCreateView(View):
 
 
 class TagDeleteView(View):
+    @method_decorator(checkAdmin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             name = req.GET.get('name')
             obj = Tag.objects.get(name=name)
@@ -61,9 +81,8 @@ class TagQueryView(View):
 
 
 class TagUpdateView(View):
+    @method_decorator(checkAdmin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             name = req.GET.get('name')
             new_desc = req.GET.get('new_desc')
@@ -76,9 +95,8 @@ class TagUpdateView(View):
 
 
 class CategoryCreateView(View):
+    @method_decorator(checkLogin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             Category.objects.create(name=req.GET.get('name'), describe=req.GET.get('desc'))
         except IntegrityError as e:
@@ -87,9 +105,8 @@ class CategoryCreateView(View):
 
 
 class CategoryDeleteView(View):
+    @method_decorator(checkAdmin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             name = req.GET.get('name')
             obj = Category.objects.get(name=name)
@@ -108,9 +125,8 @@ class CategoryQueryView(View):
 
 
 class CategoryUpdateView(View):
+    @method_decorator(checkAdmin)
     def get(self, req: HttpRequest):
-        if not req.user.is_superuser:
-            return HttpResponseForbidden('need superuser access')
         try:
             name = req.GET.get('name')
             new_desc = req.GET.get('new_desc')
@@ -155,15 +171,24 @@ class ArticleCreateView(View):
         if is_public == None:
             is_public = 1
         try:
-            category = Category.objects.get(name=req.POST['category'])
-            tags = Tag.objects.filter(name__in=tuple(req.POST['tag'].split(';')))
-        except ObjectDoesNotExist as e:
-            return JSONCORS(False, {'msg': str(e) + " Please check whether the tag and category exist"})
+            tags_name=tuple(req.POST['tag'].split(';'))
         except MultiValueDictKeyError as e:
-            return JSONCORS(False,{'msg':'MultiValueDictKeyError'+str(e)})
+            return JSONCORS(False, {'msg': 'MultiValueDictKeyError' + str(e)})
+
+        try:
+            Category.objects.get_or_create(name=req.POST['category'])
+            category = Category.objects.get(name=req.POST['category'])
+        except MultiValueDictKeyError as e:
+            return JSONCORS(False, {'msg': 'MultiValueDictKeyError' + str(e)})
+
+        for t in tags_name:
+            Tag.objects.get_or_create(name=t)
+        tags = Tag.objects.filter(name__in=tags_name)
+
         try:
             article = Article(title=req.POST['title'], author=req.user,
-                              content=req.POST['content'], create_time=now,
+                              summary=req.POST.get('summary'),content_HTML=req.POST.get('content_HTML'),
+                              content=req.POST.get('content'), create_time=now,
                               category_name=category,
                               is_public=is_public)
         except MultiValueDictKeyError as e:
@@ -208,13 +233,13 @@ class ArticleUpdateView(View):
             return HttpResponseForbidden('You are not the author of this article')
         now = timezone.now()
         dic = {}
-        field = ['title', 'content', 'is_public','category_name', 'tag_name']
+        field = ['title','summary', 'content','content_HTML', 'is_public', 'category_name', 'tag_name']
         for f in field:
             parms = req.POST.get(f)
             if parms is not None:
                 dic[f] = parms
-        if dic=={}:
-            return JSONCORS(False,{'msg':'no fields'})
+        if dic == {}:
+            return JSONCORS(False, {'msg': 'no fields'})
         try:
             if 'category_name' in dic.keys():
                 old_category = obj.category_name
@@ -237,107 +262,208 @@ class ArticleUpdateView(View):
         except ObjectDoesNotExist as e:
             return JSONCORS(False, {'msg': str(e) + " Please check whether the tag and category exist"})
         if 'title' in dic.keys():
-            obj.title =dic['title']
+            obj.title = dic['title']
+        if 'summary' in dic.keys():
+            obj.title = dic['summary']
         if 'content' in dic.keys():
             obj.content = dic['content']
+        if 'content_HTML' in dic.keys():
+            obj.content = dic['content_HTML']
         if 'is_public' in dic.keys():
             obj.is_public = dic['is_public']
-        obj.update_time=now
+        obj.update_time = now
         obj.save()
-        return JSONCORS(True,{'time':now})
+        return JSONCORS(True, {'time': now})
 
-def get_ip_address(request:HttpRequest):
+
+def get_ip_address(request: HttpRequest):
     if request.META.get('HTTP_X_FORWARDED_FOR'):
         ip = request.META.get("HTTP_X_FORWARDED_FOR")
     else:
         ip = request.META.get("REMOTE_ADDR")
     return ip
 
+
 class ArticleBrowseView(View):
-    def get(self,req:HttpRequest):
+    def get(self, req: HttpRequest):
         now = timezone.now()
-        id=req.GET.get('id')
+        id = req.GET.get('id')
         try:
-            article=Article.objects.filter(id=id)
+            article = Article.objects.filter(id=id)
             if not article:
-                return JSONCORS(False,{'msg':'no result'})
+                return JSONCORS(False, {'msg': 'no result'})
         except ValueError as e:
             return JSONCORS(False, {'msg': 'ValueError: ' + str(e)})
         if req.user.is_authenticated:
-            user=req.user
+            user = req.user
         else:
-            user=None
-        if int(article[0].is_public)!=1 and article[0].author!=user and not user.is_superuser:
-            return JSONCORS(True,{'data':'','msg':'作者设置了仅自己可见'})
-        BrowseRecord.objects.create(user=user,ip=get_ip_address(req),article=article[0],time=now)
-        article[0].page_view+=1
+            user = None
+        if int(article[0].is_public) != 1 and article[0].author != user and not user.is_superuser:
+            return JSONCORS(True, {'data': '', 'msg': '作者设置了仅自己可见'})
+        BrowseRecord.objects.create(user=user, ip=get_ip_address(req), article=article[0], time=now)
+        article[0].page_view += 1
         article[0].save()
-        return JSONCORS(True,{'data':json.loads(serializers.serialize("json", article))})
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", article))})
+
 
 class Auther_ArticleQueryView(View):
-    def get(self,req:HttpRequest):
-        author=req.GET.get('author')
+    def get(self, req: HttpRequest):
+        author = req.GET.get('author')
         if author is None:
-            return JSONCORS(False,{'msg':'author field is None'})
-        author=tuple(author.split(';'))
+            return JSONCORS(False, {'msg': 'author field is None'})
+        author = tuple(author.split(';'))
         try:
-            authors=BlogUser.objects.filter(username__in=author)
+            authors = BlogUser.objects.filter(username__in=author)
         except ValueError as e:
             return JSONCORS(False, {'msg': 'ValueError: ' + str(e)})
-        res= {}
+        res = {}
         for author in authors:
-            articles_author=res[author.username]=[]
+            articles_author = res[author.username] = []
             for article in author.article_set.all():
                 articles_author.append(article.pk)
-        return JSONCORS(True,{'article_id':res})
+        return JSONCORS(True, {'article_id': res})
+
 
 class LastestArticlesView(View):
-    def get(self,req:HttpRequest):
-        num=req.GET.get('num')
+    def get(self, req: HttpRequest):
+        num = req.GET.get('num')
         try:
-            num=int(num)
+            num = int(num)
         except ValueError:
-            return JSONCORS(False,{'msg':'Invalid parameter "num" for int() with base 10'})
+            return JSONCORS(False, {'msg': 'Invalid parameter "num" for int() with base 10'})
         if req.GET.get('author') is None:
             articles = Article.objects.raw \
                 ('select id from article_article order by id desc limit {};'.format(num))
         else:
             try:
-                author=BlogUser.objects.get(username=req.GET.get('author'))
+                author = BlogUser.objects.get(username=req.GET.get('author'))
             except ObjectDoesNotExist as e:
                 return JSONCORS(False, {'msg': 'author does not exist'})
-            articles=Article.objects.raw\
-                ('select id from article_article where author_id={} order by id desc limit {};'.format(author.id,num))
-        res=[]
+            articles = Article.objects.raw \
+                ('select id from article_article where author_id={} order by id desc limit {};'.format(author.id, num))
+        res = []
         for a in articles:
             res.append(a.id)
-        return JSONCORS(True,{'article_id':res})
+        return JSONCORS(True, {'article_id': res})
+
 
 class SearchArticlesView(View):
-    def get(self,req:HttpRequest):
+    def get(self, req: HttpRequest):
         q = req.GET.get('q')
         if not q:
-            return JSONCORS(False,{'msg':'请输入搜索关键词'})
-        objs=Article.objects.values('id','is_public','author').filter(djQ(title__icontains=q)|djQ(content__icontains=q))
-        res=[]
+            return JSONCORS(False, {'msg': '请输入搜索关键词'})
+        objs = Article.objects.values('id', 'is_public', 'author').filter(
+            djQ(title__icontains=q) | djQ(content__icontains=q))
+        res = []
         for obj in objs:
-            if int(obj['is_public'])!=1 and req.user.id!=obj['author'] and not req.user.is_superuser:
+            if int(obj['is_public']) != 1 and req.user.id != obj['author'] and not req.user.is_superuser:
                 continue
             res.append(obj['id'])
-        return JSONCORS(True, {'data':res})
+        return JSONCORS(True, {'data': res})
+
+class AdvancedSearchArticlesView(View):
+    @method_decorator(checkLogin)
+    def get(self,req:HttpRequest):
+        conditions = {}
+        for field in req.GET:
+            conditions[field]=req.GET[field]
+        objs = Article.objects.values('id', 'is_public', 'author').filter(**conditions)
+        res = []
+        for obj in objs:
+            if int(obj['is_public']) != 1 and req.user.id != obj['author'] and not req.user.is_superuser:
+                continue
+            res.append(obj['id'])
+        return JSONCORS(True, {'data': res})
+
+
 
 class CommentCreate(View):
+    @method_decorator(checkLogin)
+    def post(self, req: HttpRequest):
+        article_id = req.POST.get('article_id')
+        content = req.POST.get('content')
+        now = timezone.now()
+        reply_to_id = req.POST.get('reply_to')
+        user = req.user
+        try:
+            article = Article.objects.get(id=article_id)
+            reply_to = Comment.objects.get(id=reply_to_id)
+        except ObjectDoesNotExist as e:
+            return JSONCORS(False, {'msg': str(e)})
+        if reply_to.article != article:
+            return JSONCORS(False, {'msg': '被回复的评论和文章不一致'})
+        try:
+            com = Comment.objects.create(article=article, content=content, date=now, reply_to=reply_to, username=user)
+        except IntegrityError as e:
+            return JSONCORS(False, {'msg': str(e)})
+        return JSONCORS(True, {'data': {'article_id': article_id, 'comment_id': com.id}})
+
+
+class CommentDelete(View):
+    @method_decorator(checkLogin)
     def post(self,req:HttpRequest):
-        article_id=req.POST.get('article_id')
-        content=req.POST.get('content')
-        now=timezone.now()
-        reply_to=req.POST.get('reply_to')
+        comment_id=req.POST.get('comment_id')
+        try:
+            comment=Comment.objects.get(id=comment_id)
+        except ObjectDoesNotExist as e:
+            return JSONCORS(False, {'msg': str(e)})
         user=req.user
+        if user!=comment.username and user!=comment.article.author and not user.is_superuser \
+        and comment.reply_to is not None and user!=comment.reply_to.username:
+            return JSONCORS(False,{'msg':'No permission to delete'})
+        comment.delete()
+        return JSONCORS(True,{})
+
+class CommentQuery(View):
+    def get_a_comment_by_id(self,req:HttpRequest):
+        comment_id=req.GET.get('comment_id')
+        try:
+            comment=Comment.objects.filter(id=comment_id)
+        except ObjectDoesNotExist as e:
+            return JSONCORS(False, {'msg': str(e)})
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comment))})
+    def get_comments_by_article(self,req:HttpRequest):
+        article_id=req.GET.get('article_id')
         try:
             article=Article.objects.get(id=article_id)
         except ObjectDoesNotExist as e:
-            return JSONCORS(False,{'msg':str(e)})
-        com=Comment.objects.create(article=article,content=content,date=now,reply_to=reply_to,username=user)
-        return JSONCORS(True,{'data':{'article_id':article_id,'comment_id':com.id}})
+            return JSONCORS(False, {'msg': str(e)})
+        if req.GET.get('only_id') is not None:
+            res=[]
+            for comment in article.comment_set.all():
+                res.append(comment.pk)
+            return JSONCORS(True,{'data':res})
+        else:
+            comments=Comment.objects.filter(article__id=article_id)
+            return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
+    def get_comments_reply_to(self,req:HttpRequest):
+        comment_id = req.GET.get('comment_id') #该字段为None时查询的是reply_to为null的评论
+        article_id = req.GET.get('article_id')
+        if req.GET.get('only_id') is not None:
+            comments=Comment.objects.values('id').filter(article__id=article_id,reply_to__id=comment_id)
+            res=[]
+            for c in comments:
+                res.append(c['id'])
+            return JSONCORS(True,{'data':{'id':res}})
+        else:
+            comments=Comment.objects.filter(article__id=article_id,reply_to__id=comment_id)
+            return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
 
+    def get(self, req: HttpRequest):
+        type = req.GET.get('type')
+        if type == 'get_a_comment_by_id':
+            return self.get_a_comment_by_id(req)
+        elif type=='get_comments_by_article':
+            return self.get_comments_by_article(req)
+        elif type=='get_comments_reply_to':
+            return self.get_comments_reply_to(req)
+        return JSONCORS(False,{'msg':'没有查询type字段'})
 
+class BrowseRecordQuery(View):
+    @method_decorator(checkAdmin)
+    def get(self,req:HttpRequest):
+        conditions= {}
+        for field in req.GET:
+            conditions[field]=req.GET[field]
+        brs=BrowseRecord.objects.filter(**conditions)
+        return JSONCORS(True,{'data': json.loads(serializers.serialize("json", brs))})

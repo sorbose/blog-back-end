@@ -158,7 +158,7 @@ def query_user(request: HttpRequest):
 
 
 def is_login(request: HttpRequest):
-    return JSONCORS({'is_login': request.user.is_authenticated})
+    return JSONCORS({'success':'True','is_login': request.user.is_authenticated})
 
 
 def is_username_registered(request: HttpRequest):
@@ -166,8 +166,8 @@ def is_username_registered(request: HttpRequest):
     try:
         BlogUser.objects.get(username=username)
     except BlogUser.DoesNotExist:
-        return JSONCORS({'username': username, 'is_registered': 'False'})
-    return JSONCORS({'username': username, 'is_registered': 'True'})
+        return JSONCORS({'success':'True','username': username, 'is_registered': 'False'})
+    return JSONCORS({'success':'True','username': username, 'is_registered': 'True'})
 
 
 def is_superuser(request: HttpRequest):

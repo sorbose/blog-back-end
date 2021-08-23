@@ -18,5 +18,9 @@ urlpatterns = [
     path('getArticleByAuthor/', views.Auther_ArticleQueryView.as_view()),
     path('LastestArticles/', views.LastestArticlesView.as_view()),
     path('search/', views.SearchArticlesView.as_view()),
+    path('advance_search/', views.AdvancedSearchArticlesView.as_view()),
     path('comment/create/', views.CommentCreate.as_view()),
+    path('comment/delete/', views.CommentDelete.as_view()),
+    path('comment/query/', views.CommentQuery.as_view()),
+    path('browser_record/', views.BrowseRecordQuery.as_view()),
 ]
