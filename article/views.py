@@ -11,6 +11,7 @@ from django.utils.datastructures import MultiValueDictKeyError
 from django.views import View
 from django.core import serializers
 from django.utils.decorators import method_decorator
+from django.db import transaction
 import json
 
 import article
@@ -165,6 +166,7 @@ class TagResetCountView(View):
 
 
 class ArticleCreateView(View):
+    @transaction.atomic
     def post(self, req: HttpRequest):
         now = timezone.now()
         is_public = req.POST.get('is_public')
@@ -172,27 +174,23 @@ class ArticleCreateView(View):
             is_public = 1
         try:
             tags_name=tuple(req.POST['tag'].split(';'))
+            title=req.POST['title']
+            category=req.POST['category']
         except MultiValueDictKeyError as e:
             return JSONCORS(False, {'msg': 'MultiValueDictKeyError' + str(e)})
 
-        try:
-            Category.objects.get_or_create(name=req.POST['category'])
-            category = Category.objects.get(name=req.POST['category'])
-        except MultiValueDictKeyError as e:
-            return JSONCORS(False, {'msg': 'MultiValueDictKeyError' + str(e)})
+        Category.objects.get_or_create(name=category)
+        category = Category.objects.get(name=category)
 
         for t in tags_name:
             Tag.objects.get_or_create(name=t)
         tags = Tag.objects.filter(name__in=tags_name)
 
-        try:
-            article = Article(title=req.POST['title'], author=req.user,
+        article = Article(title=title, author=req.user,
                               summary=req.POST.get('summary'),content_HTML=req.POST.get('content_HTML'),
                               content=req.POST.get('content'), create_time=now,
                               category_name=category,
                               is_public=is_public)
-        except MultiValueDictKeyError as e:
-            return JSONCORS(False, {'msg': 'MultiValueDictKeyError: lack ' + str(e)})
         article.save()
         article.tag_name.set(tags)
         for i in range(len(tags)):
