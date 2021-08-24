@@ -3,7 +3,7 @@ import random
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage, InvalidPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError
 from django.db.models import Q as djQ
@@ -382,9 +382,10 @@ class AdvancedSearchArticlesView(View):
         paginator = Paginator(objs, num)
         try:
             res = paginator.page(page)  # 获取当前页码的记录
-        except (PageNotAnInteger, EmptyPage):
+        except PageNotAnInteger:
             res = paginator.page(1)
-
+        except (EmptyPage, InvalidPage):
+            res=paginator.page(paginator.num_pages)
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
 
 

@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-urlpatterns = {
+urlpatterns = [
     path('tag/create/', views.TagCreateView.as_view()),
     path('tag/delete/', views.TagDeleteView.as_view()),
     path('tag/update/', views.TagUpdateView.as_view()),
@@ -24,4 +24,4 @@ urlpatterns = {
     path('comment/query/', views.CommentQuery.as_view()),
     path('browser_record/', views.BrowseRecordQuery.as_view()),
     path('upload_file/', views.upload_file),
-}
+]
