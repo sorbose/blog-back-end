@@ -156,6 +156,11 @@ def query_user(request: HttpRequest):
     data['email'] = user.email
     return JSONCORS({'success': 'True', 'data': data, })
 
+def query_username_by_id(req:HttpRequest):
+    id=req.GET.get('id')
+    username=BlogUser.objects.filter(id=id).values('username').first()
+    return JSONCORS({'success': 'True', 'data': username })
+
 
 def is_login(request: HttpRequest):
     return JSONCORS({'success':'True','is_login': request.user.is_authenticated})
