@@ -1,6 +1,7 @@
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError
 from django.db.models import Q as djQ
@@ -363,15 +364,22 @@ class AdvancedSearchArticlesView(View):
     @method_decorator(checkLogin)
     def get(self,req:HttpRequest):
         conditions = {}
+        disabled_field=['browserecord','page','num','sort']
         for field in req.GET:
-            conditions[field]=req.GET[field]
-        objs = Article.objects.values('id', 'is_public', 'author').filter(**conditions)
-        res = []
-        for obj in objs:
-            if int(obj['is_public']) != 1 and req.user.id != obj['author'] and not req.user.is_superuser:
+            if field in disabled_field:
                 continue
-            res.append(obj['id'])
-        return JSONCORS(True, {'data': res})
+            conditions[field]=req.GET[field]
+        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1)|djQ(author=req.user))
+
+        page=int(req.GET.get('page',1))
+        num = int(req.GET.get('num', 5))
+        paginator=Paginator(objs,num)
+        try:
+            res = paginator.page(page)  # 获取当前页码的记录
+        except (PageNotAnInteger,EmptyPage):
+            res = paginator.page(1)
+
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
 
 
 
