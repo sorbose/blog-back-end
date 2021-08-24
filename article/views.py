@@ -369,7 +369,8 @@ class AdvancedSearchArticlesView(View):
             if field in disabled_field:
                 continue
             conditions[field]=req.GET[field]
-        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1)|djQ(author=req.user))
+        sort_fields=tuple(req.GET.get('sort','').split(';'))
+        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1)|djQ(author=req.user)).order_by(*sort_fields)
 
         page=int(req.GET.get('page',1))
         num = int(req.GET.get('num', 5))
