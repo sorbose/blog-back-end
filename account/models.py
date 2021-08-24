@@ -6,6 +6,7 @@ from django.contrib.auth.models import AbstractUser
 class BlogUser(AbstractUser):
     USERNAME_FIELD = 'username'
     birthday = models.DateField()
+    avatar = models.ImageField(upload_to='static/media/avatar',default='/static/media/avatar/default.png')
     REQUIRED_FIELDS = ['birthday']
 
     def __str__(self):

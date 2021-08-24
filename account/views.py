@@ -154,6 +154,7 @@ def query_user(request: HttpRequest):
     data['username'] = user.username
     data['birthday'] = user.birthday
     data['email'] = user.email
+    data['avatar']=user.avatar.url
     return JSONCORS({'success': 'True', 'data': data, })
 
 def query_username_by_id(req:HttpRequest):

@@ -1,3 +1,5 @@
+import os
+import random
 import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -40,6 +42,7 @@ def checkLogin(func):
             return HttpResponse('not logged in', status=401)
 
     return wrapper
+
 
 def checkAdmin(func):
     def wrapper(request, *args, **kwargs):
@@ -174,9 +177,9 @@ class ArticleCreateView(View):
         if is_public == None:
             is_public = 1
         try:
-            tags_name=tuple(req.POST['tag'].split(';'))
-            title=req.POST['title']
-            category=req.POST['category']
+            tags_name = tuple(req.POST['tag'].split(';'))
+            title = req.POST['title']
+            category = req.POST['category']
         except MultiValueDictKeyError as e:
             return JSONCORS(False, {'msg': 'MultiValueDictKeyError' + str(e)})
 
@@ -188,10 +191,10 @@ class ArticleCreateView(View):
         tags = Tag.objects.filter(name__in=tags_name)
 
         article = Article(title=title, author=req.user,
-                              summary=req.POST.get('summary'),content_HTML=req.POST.get('content_HTML'),
-                              content=req.POST.get('content'), create_time=now,
-                              category_name=category,
-                              is_public=is_public)
+                          summary=req.POST.get('summary'), content_HTML=req.POST.get('content_HTML'),
+                          content=req.POST.get('content'), create_time=now,
+                          category_name=category,
+                          is_public=is_public)
         article.save()
         article.tag_name.set(tags)
         for i in range(len(tags)):
@@ -232,7 +235,7 @@ class ArticleUpdateView(View):
             return HttpResponseForbidden('You are not the author of this article')
         now = timezone.now()
         dic = {}
-        field = ['title','summary', 'content','content_HTML', 'is_public', 'category_name', 'tag_name']
+        field = ['title', 'summary', 'content', 'content_HTML', 'is_public', 'category_name', 'tag_name']
         for f in field:
             parms = req.POST.get(f)
             if parms is not None:
@@ -360,28 +363,29 @@ class SearchArticlesView(View):
             res.append(obj['id'])
         return JSONCORS(True, {'data': res})
 
+
 class AdvancedSearchArticlesView(View):
     @method_decorator(checkLogin)
-    def get(self,req:HttpRequest):
+    def get(self, req: HttpRequest):
         conditions = {}
-        disabled_field=['browserecord','page','num','sort']
+        disabled_field = ['browserecord', 'page', 'num', 'sort']
         for field in req.GET:
             if field in disabled_field:
                 continue
-            conditions[field]=req.GET[field]
-        sort_fields=tuple(req.GET.get('sort','').split(';'))
-        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1)|djQ(author=req.user)).order_by(*sort_fields)
+            conditions[field] = req.GET[field]
+        sort_fields = tuple(req.GET.get('sort', '').split(';'))
+        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1) | djQ(author=req.user)).order_by(
+            *sort_fields)
 
-        page=int(req.GET.get('page',1))
+        page = int(req.GET.get('page', 1))
         num = int(req.GET.get('num', 5))
-        paginator=Paginator(objs,num)
+        paginator = Paginator(objs, num)
         try:
             res = paginator.page(page)  # 获取当前页码的记录
-        except (PageNotAnInteger,EmptyPage):
+        except (PageNotAnInteger, EmptyPage):
             res = paginator.page(1)
 
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
-
 
 
 class CommentCreate(View):
@@ -408,69 +412,96 @@ class CommentCreate(View):
 
 class CommentDelete(View):
     @method_decorator(checkLogin)
-    def post(self,req:HttpRequest):
-        comment_id=req.POST.get('comment_id')
+    def post(self, req: HttpRequest):
+        comment_id = req.POST.get('comment_id')
         try:
-            comment=Comment.objects.get(id=comment_id)
+            comment = Comment.objects.get(id=comment_id)
         except ObjectDoesNotExist as e:
             return JSONCORS(False, {'msg': str(e)})
-        user=req.user
-        if user!=comment.username and user!=comment.article.author and not user.is_superuser \
-        and comment.reply_to is not None and user!=comment.reply_to.username:
-            return JSONCORS(False,{'msg':'No permission to delete'})
+        user = req.user
+        if user != comment.username and user != comment.article.author and not user.is_superuser \
+                and comment.reply_to is not None and user != comment.reply_to.username:
+            return JSONCORS(False, {'msg': 'No permission to delete'})
         comment.delete()
-        return JSONCORS(True,{})
+        return JSONCORS(True, {})
+
 
 class CommentQuery(View):
-    def get_a_comment_by_id(self,req:HttpRequest):
-        comment_id=req.GET.get('comment_id')
+    def get_a_comment_by_id(self, req: HttpRequest):
+        comment_id = req.GET.get('comment_id')
         try:
-            comment=Comment.objects.filter(id=comment_id)
+            comment = Comment.objects.filter(id=comment_id)
         except ObjectDoesNotExist as e:
             return JSONCORS(False, {'msg': str(e)})
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comment))})
-    def get_comments_by_article(self,req:HttpRequest):
-        article_id=req.GET.get('article_id')
+
+    def get_comments_by_article(self, req: HttpRequest):
+        article_id = req.GET.get('article_id')
         try:
-            article=Article.objects.get(id=article_id)
+            article = Article.objects.get(id=article_id)
         except ObjectDoesNotExist as e:
             return JSONCORS(False, {'msg': str(e)})
         if req.GET.get('only_id') is not None:
-            res=[]
+            res = []
             for comment in article.comment_set.all():
                 res.append(comment.pk)
-            return JSONCORS(True,{'data':res})
+            return JSONCORS(True, {'data': res})
         else:
-            comments=Comment.objects.filter(article__id=article_id)
+            comments = Comment.objects.filter(article__id=article_id)
             return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
-    def get_comments_reply_to(self,req:HttpRequest):
-        comment_id = req.GET.get('comment_id') #该字段为None时查询的是reply_to为null的评论
+
+    def get_comments_reply_to(self, req: HttpRequest):
+        comment_id = req.GET.get('comment_id')  # 该字段为None时查询的是reply_to为null的评论
         article_id = req.GET.get('article_id')
         if req.GET.get('only_id') is not None:
-            comments=Comment.objects.values('id').filter(article__id=article_id,reply_to__id=comment_id)
-            res=[]
+            comments = Comment.objects.values('id').filter(article__id=article_id, reply_to__id=comment_id)
+            res = []
             for c in comments:
                 res.append(c['id'])
-            return JSONCORS(True,{'data':{'id':res}})
+            return JSONCORS(True, {'data': {'id': res}})
         else:
-            comments=Comment.objects.filter(article__id=article_id,reply_to__id=comment_id)
+            comments = Comment.objects.filter(article__id=article_id, reply_to__id=comment_id)
             return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
 
     def get(self, req: HttpRequest):
         type = req.GET.get('type')
         if type == 'get_a_comment_by_id':
             return self.get_a_comment_by_id(req)
-        elif type=='get_comments_by_article':
+        elif type == 'get_comments_by_article':
             return self.get_comments_by_article(req)
-        elif type=='get_comments_reply_to':
+        elif type == 'get_comments_reply_to':
             return self.get_comments_reply_to(req)
-        return JSONCORS(False,{'msg':'没有查询type字段'})
+        return JSONCORS(False, {'msg': '没有查询type字段'})
+
 
 class BrowseRecordQuery(View):
     @method_decorator(checkAdmin)
-    def get(self,req:HttpRequest):
-        conditions= {}
+    def get(self, req: HttpRequest):
+        conditions = {}
         for field in req.GET:
-            conditions[field]=req.GET[field]
-        brs=BrowseRecord.objects.filter(**conditions)
-        return JSONCORS(True,{'data': json.loads(serializers.serialize("json", brs))})
+            conditions[field] = req.GET[field]
+        brs = BrowseRecord.objects.filter(**conditions)
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", brs))})
+
+def generate_random_str(randomlength=8):
+    random_str = ''
+    base_str = 'ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789'
+    length = len(base_str) - 1
+    for i in range(randomlength):
+        random_str += base_str[random.randint(0, length)]
+    return random_str
+
+@transaction.atomic
+def upload_file(request:HttpRequest):
+    if request.method == "POST":
+        myFile = request.FILES.get("myfile", None)
+        fff=request.FILES
+        # if not myFile:
+        #     return JSONCORS(False, {'msg': 'no file'})
+
+        path = os.path.join("static/media/article_img", generate_random_str()+'_'+myFile.name)
+        destination = open(path, 'wb+')  # 打开特定的文件进行二进制的写操作
+        for chunk in myFile.chunks():
+            destination.write(chunk)
+        destination.close()
+        return JSONCORS(True, {'path': path})
