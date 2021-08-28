@@ -1,6 +1,7 @@
 import os
 import random
 import traceback
+from queue import Queue
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage, InvalidPage
@@ -450,7 +451,24 @@ class CommentQuery(View):
             return JSONCORS(True, {'data': res})
         else:
             comments = Comment.objects.filter(article__id=article_id)
-            return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
+            comments_json=json.loads(serializers.serialize("json", comments))
+            dic={}
+            for com in comments_json:
+                com['fields']['childrens']= {}
+                dic[com['pk']]=com
+            qu=Queue()
+            for com in comments:
+                qu.put(com)
+            res={}
+            while not qu.empty():
+                com=qu.get()
+                if com.reply_to is not None:
+                    par=com.reply_to
+                    qu.put(par)
+                    dic[com.reply_to.id]['fields']['childrens'][com.id]=dic[com.id]
+                else:
+                    res[com.id]=dic[com.id]
+            return JSONCORS(True, {'data': res})
 
     def get_comments_reply_to(self, req: HttpRequest):
         comment_id = req.GET.get('comment_id')  # 该字段为None时查询的是reply_to为null的评论
