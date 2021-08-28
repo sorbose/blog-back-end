@@ -164,7 +164,7 @@ def query_username_by_id(req:HttpRequest):
 
 
 def is_login(request: HttpRequest):
-    return JSONCORS({'success':'True','is_login': request.user.is_authenticated})
+    return JSONCORS({'success':'True','is_login': request.user.is_authenticated,'username':request.user.username,'id':request.user.id})
 
 
 def is_username_registered(request: HttpRequest):

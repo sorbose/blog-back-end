@@ -55,6 +55,8 @@ class Comment(models.Model):
     date = models.DateTimeField()
     reply_to = models.ForeignKey('Comment', null=True,on_delete=models.CASCADE)
     username = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT)
+    level = models.IntegerField(default=0)
+    toUser = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT,related_name='toUser',null=True)
 
 class BrowseRecord(models.Model):
     user=models.ForeignKey('account.BlogUser',on_delete=models.RESTRICT)

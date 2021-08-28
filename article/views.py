@@ -399,15 +399,19 @@ class CommentCreate(View):
         now = timezone.now()
         reply_to_id = req.POST.get('reply_to')
         user = req.user
+        level = req.POST.get('level')
+        toUser = req.POST.get('toUser')
+        if toUser:
+            toUser = BlogUser.objects.get(id=toUser)
         try:
             article = Article.objects.get(id=article_id)
             reply_to = Comment.objects.get(id=reply_to_id)
         except ObjectDoesNotExist as e:
-            return JSONCORS(False, {'msg': str(e)})
-        if reply_to.article != article:
-            return JSONCORS(False, {'msg': '被回复的评论和文章不一致'})
+            reply_to = None
+            # return JSONCORS(False, {'msg': str(e)})
         try:
-            com = Comment.objects.create(article=article, content=content, date=now, reply_to=reply_to, username=user)
+            com = Comment.objects.create(article=article, content=content, date=now, reply_to=reply_to, username=user,
+                                         level=level,toUser=toUser)
         except IntegrityError as e:
             return JSONCORS(False, {'msg': str(e)})
         return JSONCORS(True, {'data': {'article_id': article_id, 'comment_id': com.id}})
@@ -450,24 +454,46 @@ class CommentQuery(View):
                 res.append(comment.pk)
             return JSONCORS(True, {'data': res})
         else:
-            comments = Comment.objects.filter(article__id=article_id)
-            comments_json=json.loads(serializers.serialize("json", comments))
-            dic={}
-            for com in comments_json:
-                com['fields']['childrens']= {}
-                dic[com['pk']]=com
-            qu=Queue()
-            for com in comments:
-                qu.put(com)
-            res={}
-            while not qu.empty():
-                com=qu.get()
-                if com.reply_to is not None:
-                    par=com.reply_to
-                    qu.put(par)
-                    dic[com.reply_to.id]['fields']['childrens'][com.id]=dic[com.id]
-                else:
-                    res[com.id]=dic[com.id]
+            res = []
+            comments = Comment.objects.filter(article__id=article_id).order_by('date').reverse()
+            for comment in comments:
+                if comment.level!=0:
+                    continue
+                obj = {
+                    'author':{
+                        'id':str(comment.username.id),
+                        'nickname':str(comment.username.username)
+                    },
+                    'content':str(comment.content),
+                    'createDate':str(comment.date),
+                    'id':comment.id,
+                    'level':comment.level,
+                    'childrens':[]
+                }
+                res.append(obj)
+            for comment in comments:
+                if comment.level==0:
+                    continue
+                obj = {
+                    'author': {
+                        'id': str(comment.username.id),
+                        'nickname': str(comment.username.username)
+                    },
+                    'content': str(comment.content),
+                    'createDate': str(comment.date),
+                    'id': comment.id,
+                    'level': comment.level,
+                    'childrens': []
+                }
+                for i in res:
+                    if i['id']==comment.reply_to.id:
+                        if comment.level==2:
+                            obj['toUser'] = {
+                                'id':str(comment.toUser.id),
+                                'nickname':str(comment.toUser.username)
+                            }
+                        i['childrens'].append(obj)
+                        break
             return JSONCORS(True, {'data': res})
 
     def get_comments_reply_to(self, req: HttpRequest):
@@ -480,8 +506,9 @@ class CommentQuery(View):
                 res.append(c['id'])
             return JSONCORS(True, {'data': {'id': res}})
         else:
-            comments = Comment.objects.filter(article__id=article_id, reply_to__id=comment_id)
-            return JSONCORS(True, {'data': json.loads(serializers.serialize("json", comments))})
+            res = []
+            comments = Comment.objects.filter(article__id=article_id, reply_to__id=comment_id).order_by('date')
+            return JSONCORS(True, {'data': res})
 
     def get(self, req: HttpRequest):
         type = req.GET.get('type')
