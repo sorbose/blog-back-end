@@ -59,5 +59,5 @@ class Comment(models.Model):
 class BrowseRecord(models.Model):
     user=models.ForeignKey('account.BlogUser',on_delete=models.RESTRICT)
     ip=models.GenericIPAddressField()
-    article=models.ForeignKey('Article',on_delete=models.RESTRICT)
+    article=models.ForeignKey('Article',on_delete=models.CASCADE)
     time=models.DateTimeField()

@@ -374,8 +374,9 @@ class AdvancedSearchArticlesView(View):
                 continue
             conditions[field] = req.GET[field]
         sort_fields = tuple(req.GET.get('sort', '').split(';'))
-        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1) | djQ(author=req.user)).order_by(
-            *sort_fields)
+        objs = Article.objects.filter(**conditions).filter(djQ(is_public=1) | djQ(author=req.user))
+        if sort_fields[0]!='':
+            objs=objs.order_by(*sort_fields)
 
         page = int(req.GET.get('page', 1))
         num = int(req.GET.get('num', 5))
@@ -385,7 +386,7 @@ class AdvancedSearchArticlesView(View):
         except PageNotAnInteger:
             res = paginator.page(1)
         except (EmptyPage, InvalidPage):
-            res=paginator.page(paginator.num_pages)
+            res= {}
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
 
 
