@@ -541,7 +541,7 @@ def generate_random_str(randomlength=8):
 @transaction.atomic
 def upload_file(request:HttpRequest):
     if request.method == "POST":
-        myFile = request.FILES.get("myfile", None)
+        myFile = request.FILES.get("image", None)
         fff=request.FILES
         # if not myFile:
         #     return JSONCORS(False, {'msg': 'no file'})

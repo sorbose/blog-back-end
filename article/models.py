@@ -1,6 +1,5 @@
 from django.db import models
 
-
 # Create your models here.
 from django.db.models import UniqueConstraint
 
@@ -42,11 +41,30 @@ class Article(models.Model):
     repost_num = models.IntegerField(default=0)
     page_view=models.IntegerField(default=0)
     is_public = models.SmallIntegerField(default=1)
+    comment_num = models.IntegerField(default=0)
+
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
         super().save(force_insert=force_insert, force_update=force_update, using=using,
              update_fields=update_fields)
         print(self.author)
+
+
+class CommentManager(models.Manager):
+    def create(self,**kwargs):
+        article = kwargs.get('article',None)
+        if article:
+            article.comment_num += 1
+            article.save()
+            print("文章评论数量++")
+        return super(CommentManager, self).create(**kwargs)
+
+    def delete(self,**kwargs):
+        article = kwargs.get('article', None)
+        if article:
+            article.comment_num -= 1
+            article.save()
+        return super(CommentManager, self).delete(**kwargs)
 
 
 class Comment(models.Model):
@@ -57,6 +75,8 @@ class Comment(models.Model):
     username = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT)
     level = models.IntegerField(default=0)
     toUser = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT,related_name='toUser',null=True)
+    objects = CommentManager()
+
 
 class BrowseRecord(models.Model):
     user=models.ForeignKey('account.BlogUser',on_delete=models.RESTRICT)
