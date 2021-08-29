@@ -542,9 +542,6 @@ def generate_random_str(randomlength=8):
 def upload_file(request:HttpRequest):
     if request.method == "POST":
         myFile = request.FILES.get("image", None)
-        fff=request.FILES
-        # if not myFile:
-        #     return JSONCORS(False, {'msg': 'no file'})
 
         path = os.path.join("static/media/article_img", generate_random_str()+'_'+myFile.name)
         destination = open(path, 'wb+')  # 打开特定的文件进行二进制的写操作

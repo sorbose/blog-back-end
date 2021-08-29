@@ -1,4 +1,5 @@
 import json
+import os
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.middleware.csrf import get_token
@@ -45,13 +46,13 @@ def JSONCORS(data: dict):
 def register(request: HttpRequest):
     print("request.headers:")
     print(request.headers)
-    if request.method == 'OPTIONS':
-        response = HttpResponse()
-        response["Access-Control-Allow-Origin"] = "*"
-        response["Access-Control-Allow-Headers"] = "*"
-        response["Access-Control-Max-Age"] = "60"
-        response["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
-        return response
+    # if request.method == 'OPTIONS':
+    #     response = HttpResponse()
+    #     response["Access-Control-Allow-Origin"] = "*"
+    #     response["Access-Control-Allow-Headers"] = "*"
+    #     response["Access-Control-Max-Age"] = "60"
+    #     response["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+    #     return response
 
     try:
         dic = {}
@@ -145,6 +146,24 @@ def delete_user(request: HttpRequest):
     user.delete()
     return JSONCORS({'success': 'True', 'msg': 'Delete user successfully'})
 
+def change_account_inf(req:HttpRequest):
+    update_fields= {}
+    account=req.user
+    update_fields['email']=req.POST.get('email',account.email)
+    update_fields['birthday'] = req.POST.get('birthday',account.birthday)
+    update_fields['avatar'] = req.POST.get('avatar',account.avatar)
+    BlogUser.objects.filter(pk=account.pk).update(**update_fields)
+    return JSONCORS({'success':'True'})
+
+def user_avatar(request:HttpRequest):
+    if request.method == "POST":
+        avatar = request.FILES.get("image", None)
+        path = os.path.join("static/media/avatar", request.user.username+".jpg")
+        destination = open(path, 'wb+')  # 打开特定的文件进行二进制的写操作
+        for chunk in avatar.chunks():
+            destination.write(chunk)
+        destination.close()
+        return JSONCORS({'success':'True'})
 
 def query_user(request: HttpRequest):
     if not request.user.is_authenticated:
