@@ -11,3 +11,11 @@ class BlogUser(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def natural_key(self):
+        # return (self.id,self.username,self.avatar.url,)
+        return {
+            'id':self.id,
+            'avatar':self.avatar.url,
+            'username':self.username
+        }

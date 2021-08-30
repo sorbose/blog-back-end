@@ -236,7 +236,7 @@ class ArticleUpdateView(View):
             return HttpResponseForbidden('You are not the author of this article')
         now = timezone.now()
         dic = {}
-        field = ['title', 'summary', 'content', 'content_HTML', 'is_public', 'category_name', 'tag_name']
+        field = ['title', 'summary', 'content', 'content_HTML', 'is_public', 'category', 'tag']
         for f in field:
             parms = req.POST.get(f)
             if parms is not None:
@@ -244,19 +244,22 @@ class ArticleUpdateView(View):
         if dic == {}:
             return JSONCORS(False, {'msg': 'no fields'})
         try:
-            if 'category_name' in dic.keys():
+            if 'category' in dic.keys():
                 old_category = obj.category_name
-                new_category = Category.objects.get(name=dic['category_name'])
+                new_category, success = Category.objects.get_or_create(name=dic['category'])
                 obj.category_name = new_category
                 obj.save()
                 Category.objects.get(name=new_category.name).update_number_with_this(1)
                 Category.objects.get(name=old_category.name).update_number_with_this(-1)
-            if 'tag_name' in dic.keys():
+            if 'tag' in dic.keys():
                 old_tags_name = []
+
                 for tag in obj.tag_name.all():
                     old_tags_name.append(tag.name)
                 old_tags = Tag.objects.filter(name__in=tuple(old_tags_name))
-                new_tags = Tag.objects.filter(name__in=tuple(dic['tag_name'].split(';')))
+                for new_tag in tuple(dic['tag'].split(';')):
+                    Tag.objects.get_or_create(name=new_tag)
+                new_tags = Tag.objects.filter(name__in=tuple(dic['tag'].split(';')))
                 obj.tag_name.set(new_tags)
                 for i in range(len(new_tags)):
                     new_tags[i].update_number_with_this(1)
@@ -267,11 +270,11 @@ class ArticleUpdateView(View):
         if 'title' in dic.keys():
             obj.title = dic['title']
         if 'summary' in dic.keys():
-            obj.title = dic['summary']
+            obj.summary = dic['summary']
         if 'content' in dic.keys():
             obj.content = dic['content']
         if 'content_HTML' in dic.keys():
-            obj.content = dic['content_HTML']
+            obj.content_HTML = dic['content_HTML']
         if 'is_public' in dic.keys():
             obj.is_public = dic['is_public']
         obj.update_time = now
@@ -306,7 +309,7 @@ class ArticleBrowseView(View):
         BrowseRecord.objects.create(user=user, ip=get_ip_address(req), article=article[0], time=now)
         article[0].page_view += 1
         article[0].save()
-        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", article))})
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", article,use_natural_foreign_keys=True, use_natural_primary_keys=True))})
 
 
 class Auther_ArticleQueryView(View):
@@ -462,7 +465,8 @@ class CommentQuery(View):
                 obj = {
                     'author':{
                         'id':str(comment.username.id),
-                        'nickname':str(comment.username.username)
+                        'nickname':str(comment.username.username),
+                        'avatar':str(comment.username.avatar.url)
                     },
                     'content':str(comment.content),
                     'createDate':str(comment.date),

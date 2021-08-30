@@ -13,7 +13,7 @@ from django.http import JsonResponse, HttpResponse, HttpResponseForbidden, HttpR
     HttpResponseNotAllowed
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from itertools import islice
-
+from django.core import serializers
 
 # Create your views here.
 def get_csrftoken(request):
@@ -155,7 +155,7 @@ def change_account_inf(req:HttpRequest):
     BlogUser.objects.filter(pk=account.pk).update(**update_fields)
     return JSONCORS({'success':'True'})
 
-def user_avatar(request:HttpRequest):
+def upload_avatar(request:HttpRequest):
     if request.method == "POST":
         avatar = request.FILES.get("image", None)
         path = os.path.join("static/media/avatar", request.user.username+".jpg")
@@ -163,7 +163,8 @@ def user_avatar(request:HttpRequest):
         for chunk in avatar.chunks():
             destination.write(chunk)
         destination.close()
-        return JSONCORS({'success':'True'})
+        BlogUser.objects.filter(pk=request.user.id).update(**{'avatar':path})
+        return JSONCORS({'success':'True','path':path})
 
 def query_user(request: HttpRequest):
     if not request.user.is_authenticated:
@@ -183,7 +184,9 @@ def query_username_by_id(req:HttpRequest):
 
 
 def is_login(request: HttpRequest):
-    return JSONCORS({'success':'True','is_login': request.user.is_authenticated,'username':request.user.username,'id':request.user.id})
+    fields = ('username','avatar','email','birthday','date_joined','last_login','is_superuser')
+    data = serializers.serialize('json',BlogUser.objects.filter(id=request.user.id),fields=fields)
+    return JSONCORS({'success':'True','is_login': request.user.is_authenticated,'data':json.loads(data)})
 
 
 def is_username_registered(request: HttpRequest):

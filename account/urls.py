@@ -9,7 +9,7 @@ urlpatterns = [
     path('logout/',views.user_logout,name='user_logout'),
     path('delete/',views.delete_user,name='delete_user'),
     path('change/', views.change_account_inf),
-    path('avatar/', views.user_avatar),
+    path('avatar/', views.upload_avatar),
     path('changepassword/',views.change_password,name='change_password'),
     path('query/',views.query_user,name='query_user'),
     path('query_username_by_id/', views.query_username_by_id),
