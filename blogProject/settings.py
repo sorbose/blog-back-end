@@ -86,7 +86,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',  # 数据库引擎
         'NAME': 'blogProject_django',  # 数据库名
         'USER': 'root',  # 账号
-        'PASSWORD': '123456',  # 密码
+        'PASSWORD': 'gxu123',  # 密码
         'HOST': '127.0.0.1',  # HOST
         'POST': 3306,  # 端口
 
@@ -124,7 +124,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/

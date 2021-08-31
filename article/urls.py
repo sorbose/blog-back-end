@@ -24,4 +24,5 @@ urlpatterns = [
     path('comment/query/', views.CommentQuery.as_view()),
     path('browser_record/', views.BrowseRecordQuery.as_view()),
     path('upload_file/', views.upload_file),
+    path('listArchives/', views.ArticleArchiveView.as_view()),
 ]

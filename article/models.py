@@ -27,6 +27,13 @@ class Category(models.Model):
         self.number_with_this=Article.objects.filter(category_name=self.name).count()
         self.save()
 
+class ArticleManager(models.Manager):
+    def create(self,**kwargs):
+        create_time=kwargs.get('create_time')
+        aa = ArticleArchive.objects.get_or_create(year=create_time.year, month=create_time.month)[0]
+        aa.count+=1
+        aa.save()
+        return super(ArticleManager, self).create(**kwargs)
 
 class Article(models.Model):
     title = models.CharField(max_length=100)
@@ -34,20 +41,22 @@ class Article(models.Model):
     summary = models.TextField(null=True)
     content = models.TextField(null=True)
     content_HTML = models.TextField(null=True)
-    create_time = models.DateTimeField()
-    update_time = models.DateTimeField(null=True,default=None)
+    create_time = models.DateTimeField(auto_now_add=True)
+    update_time = models.DateTimeField(null=True,auto_now=True)
     category_name = models.ForeignKey('Category', on_delete=models.RESTRICT)
     tag_name = models.ManyToManyField('Tag')
     repost_num = models.IntegerField(default=0)
     page_view=models.IntegerField(default=0)
     is_public = models.SmallIntegerField(default=1)
     comment_num = models.IntegerField(default=0)
+    objects=ArticleManager()
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        super().save(force_insert=force_insert, force_update=force_update, using=using,
-             update_fields=update_fields)
-        print(self.author)
+    # def save(self):
+    #     super(Article,self).save()
+    #     aa=ArticleArchive.objects.get_or_create(year=self.create_time.year,month=self.create_time.month)
+    #     aa.count+=1
+    #     aa.save()
+    #     self.save()
 
 
 class CommentManager(models.Manager):
@@ -83,3 +92,25 @@ class BrowseRecord(models.Model):
     ip=models.GenericIPAddressField()
     article=models.ForeignKey('Article',on_delete=models.CASCADE)
     time=models.DateTimeField()
+
+class ArticleArchiveManager(models.Manager):
+    def get_or_create(self,**kwargs):
+        aa,created=super(ArticleArchiveManager, self).get_or_create(**kwargs)
+        count = Article.objects.filter(create_time__year=aa.year,create_time__month=aa.month).count()
+        aa.count=count
+        aa.save()
+        return aa,created
+
+class ArticleArchive(models.Model):
+    year=models.SmallIntegerField()
+    month=models.SmallIntegerField()
+    count=models.IntegerField(default=0)
+    objects=ArticleArchiveManager()
+
+    # def save(self):
+    #     super(ArticleArchive,self).save()
+    #     count=Article.objects.filter(create_time__year=self.year,create_time__month=self.month).count()
+    #     self.count=count
+    #     self.save()
+
+

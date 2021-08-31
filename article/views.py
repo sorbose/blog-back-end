@@ -191,12 +191,11 @@ class ArticleCreateView(View):
             Tag.objects.get_or_create(name=t)
         tags = Tag.objects.filter(name__in=tags_name)
 
-        article = Article(title=title, author=req.user,
+        article = Article.objects.create(title=title, author=req.user,
                           summary=req.POST.get('summary'), content_HTML=req.POST.get('content_HTML'),
                           content=req.POST.get('content'), create_time=now,
                           category_name=category,
                           is_public=is_public)
-        article.save()
         article.tag_name.set(tags)
         for i in range(len(tags)):
             tags[i].update_number_with_this(1)
@@ -224,6 +223,7 @@ class ArticleDeleteView(View):
 
 
 class ArticleUpdateView(View):
+    @transaction.atomic
     def post(self, req: HttpRequest):
         try:
             id = req.POST['id']
@@ -392,6 +392,11 @@ class AdvancedSearchArticlesView(View):
         except (EmptyPage, InvalidPage):
             res= {}
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
+
+class ArticleArchiveView(View):
+    def get(self,req:HttpRequest):
+        aas=ArticleArchive.objects.all()
+        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", aas))})
 
 
 class CommentCreate(View):
