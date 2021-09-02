@@ -6,6 +6,7 @@ from django.middleware.csrf import get_token
 from django.shortcuts import render
 from django.utils.datastructures import MultiValueDictKeyError
 from django.db import IntegrityError
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import BlogUser
 from django.http.request import HttpRequest
@@ -183,6 +184,7 @@ def query_username_by_id(req:HttpRequest):
     return JSONCORS({'success': 'True', 'data': username })
 
 
+@ensure_csrf_cookie
 def is_login(request: HttpRequest):
     fields = ('username','avatar','email','birthday','date_joined','last_login','is_superuser')
     data = serializers.serialize('json',BlogUser.objects.filter(id=request.user.id),fields=fields)

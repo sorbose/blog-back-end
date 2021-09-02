@@ -15,5 +15,5 @@ urlpatterns = [
     path('query_username_by_id/', views.query_username_by_id),
     path('is_login/',views.is_login,name='is_login'),
     path('is_username_registered/',views.is_username_registered,name='is_username_registered'),
-    path('admin/create/',views.create_users,name='create_users')
+    path('blog_admin/create/',views.create_users,name='create_users')
 ]

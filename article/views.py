@@ -463,7 +463,7 @@ class CommentQuery(View):
             return JSONCORS(True, {'data': res})
         else:
             res = []
-            comments = Comment.objects.filter(article__id=article_id).order_by('date').reverse()
+            comments = Comment.objects.filter(article__id=article_id).order_by('-date')
             for comment in comments:
                 if comment.level!=0:
                     continue
