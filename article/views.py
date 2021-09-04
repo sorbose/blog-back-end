@@ -18,6 +18,8 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 import json
 
+from rest_framework import generics
+
 import article
 from .models import *
 from account.models import BlogUser
@@ -204,6 +206,7 @@ class ArticleCreateView(View):
 
 
 class ArticleDeleteView(View):
+    @transaction.atomic
     def post(self, req: HttpRequest):
         try:
             id = req.POST['id']
@@ -218,6 +221,11 @@ class ArticleDeleteView(View):
             tag.update_number_with_this(-1)
         Category.objects.get(name=obj.category_name.name).update_number_with_this(-1)
         author = obj.author
+        year = obj.create_time.year
+        month = obj.create_time.month
+        ac = ArticleArchive.objects.get(year=year, month=month)
+        ac.count -= 1
+        ac.save()
         obj.delete()
         return JSONCORS(True, {'msg': 'successfully deleted', 'id': id, 'author': str(author)})
 
@@ -558,3 +566,36 @@ def upload_file(request:HttpRequest):
             destination.write(chunk)
         destination.close()
         return JSONCORS(True, {'path': path})
+
+
+
+
+
+from .serializers import ArticleListSerializer, ArticleDetailSerializer
+from .pagination import ArticleListPagination
+from .filter import ArticleFilter
+from blog_admin.views import Success
+
+class ArticleList(generics.ListAPIView):
+    queryset = Article.objects.all()
+    serializer_class = ArticleListSerializer
+    filter_class = ArticleFilter
+    search_fields = ('title','content','author__username','tag_name__name')
+    # filter_fields = ['content','tag_name','category_name','author','create_time']
+    ordering_fields = ('create_time','page_view')
+    pagination_class = ArticleListPagination
+    def get(self, request, *args, **kwargs):
+        return Success(super(ArticleList, self).get(request, *args, **kwargs))
+
+
+
+class ArticleCreate(generics.CreateAPIView):
+    queryset = Article.objects.all()
+    serializer_class = ArticleDetailSerializer
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        return super(ArticleCreate, self).post(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)

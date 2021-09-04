@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.utils import timezone
 # Create your models here.
 from django.db.models import UniqueConstraint
 
@@ -30,10 +30,16 @@ class Category(models.Model):
 class ArticleManager(models.Manager):
     def create(self,**kwargs):
         create_time=kwargs.get('create_time')
+        if not create_time:
+            create_time = timezone.now()
         aa = ArticleArchive.objects.get_or_create(year=create_time.year, month=create_time.month)[0]
         aa.count+=1
         aa.save()
+        print()
         return super(ArticleManager, self).create(**kwargs)
+    def delete(self,**kwargs):
+        print(self.pk)
+        return super(ArticleManager, self).delete(**kwargs)
 
 class Article(models.Model):
     title = models.CharField(max_length=100)

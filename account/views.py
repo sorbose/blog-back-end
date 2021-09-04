@@ -233,3 +233,15 @@ def create_users(request: HttpRequest):
     for bu in success:
         res.append(bu.username)
     return JSONCORS({'success': 'True', 'created_usernames': res})
+
+from rest_framework import generics
+from .models import BlogUser
+from .serializers import ChangeInfoSerializer
+
+class ChangeUserInfo(generics.UpdateAPIView):
+
+    queryset = BlogUser.objects.all()
+    serializer_class = ChangeInfoSerializer
+
+    def perform_update(self, serializer):
+        serializer.save()
