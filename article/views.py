@@ -17,7 +17,7 @@ from django.core import serializers
 from django.utils.decorators import method_decorator
 from django.db import transaction
 import json
-
+from django.db.models import QuerySet
 from rest_framework import generics
 
 import article
@@ -581,7 +581,6 @@ class ArticleList(generics.ListAPIView):
     serializer_class = ArticleListSerializer
     filter_class = ArticleFilter
     search_fields = ('title','content','author__username','tag_name__name')
-    # filter_fields = ['content','tag_name','category_name','author','create_time']
     ordering_fields = ('create_time','page_view')
     pagination_class = ArticleListPagination
     def get(self, request, *args, **kwargs):

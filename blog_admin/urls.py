@@ -8,7 +8,8 @@ urlpatterns = [
     path('users/',views.UserList.as_view()),
     path('users/<int:pk>',views.UserDelete.as_view()),
     path('browser-record/',views.BrowserList.as_view()),
-    path('browser-record/<int:pk>',views.BrowserDelete.as_view())
+    path('browser-record/<int:pk>',views.BrowserDelete.as_view()),
+    path('delete-zero/',views.delete_zero)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

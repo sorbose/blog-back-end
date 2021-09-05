@@ -6,6 +6,9 @@ from account.models import BlogUser
 from . import serializers
 from rest_framework.response import Response
 from rest_framework import filters
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+
 
 
 def Success(response):
@@ -73,3 +76,13 @@ class BrowserList(generics.ListAPIView):
 class BrowserDelete(generics.DestroyAPIView):
     queryset = BrowseRecord.objects.all()
     permission_classes = (permissions.IsAdminUser,)
+
+
+def delete_zero(request):
+    if request.method == 'DELETE':
+        import pymysql
+        conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd='123456', db='blogproject_django', charset='utf8')
+        cursor = conn.cursor()
+        cursor.callproc('delete_zeros')
+        conn.commit()
+        return JsonResponse(data={'success': True})
