@@ -57,6 +57,7 @@ class UserList(generics.ListCreateAPIView):
 class UserDelete(generics.DestroyAPIView):
     permission_classes = (permissions.IsAdminUser,)
     queryset = BlogUser.objects.all()
+    
 
 
 class BrowserList(generics.ListAPIView):

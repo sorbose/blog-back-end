@@ -575,7 +575,7 @@ from .serializers import ArticleListSerializer, ArticleDetailSerializer
 from .pagination import ArticleListPagination
 from .filter import ArticleFilter
 from blog_admin.views import Success
-
+from rest_framework import permissions
 class ArticleList(generics.ListAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleListSerializer
@@ -585,6 +585,12 @@ class ArticleList(generics.ListAPIView):
     ordering_fields = ('create_time','page_view')
     pagination_class = ArticleListPagination
     def get(self, request, *args, **kwargs):
+        author = self.request.query_params.get('author', None)
+        if self.request.query_params.get('author', None):
+            if author == self.request.user.id:
+                self.queryset = Article.objects.all()
+        else:
+            self.queryset = Article.objects.filter(is_public=1)
         return Success(super(ArticleList, self).get(request, *args, **kwargs))
 
 
@@ -592,6 +598,7 @@ class ArticleList(generics.ListAPIView):
 class ArticleCreate(generics.CreateAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleDetailSerializer
+    permission_classes = (permissions.IsAuthenticated)
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):

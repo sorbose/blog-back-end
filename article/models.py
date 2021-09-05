@@ -37,9 +37,6 @@ class ArticleManager(models.Manager):
         aa.save()
         print()
         return super(ArticleManager, self).create(**kwargs)
-    def delete(self,**kwargs):
-        print(self.pk)
-        return super(ArticleManager, self).delete(**kwargs)
 
 class Article(models.Model):
     title = models.CharField(max_length=100)
@@ -64,22 +61,37 @@ class Article(models.Model):
     #     aa.save()
     #     self.save()
 
+class Public_Article(models.Model):
+    # id = models.BigIntegerField(primary_key=True)
+    title = models.CharField(max_length=100)
+    author = models.ForeignKey('account.BlogUser', on_delete=models.RESTRICT)
+    summary = models.TextField(null=True)
+    content = models.TextField(null=True)
+    content_HTML = models.TextField(null=True)
+    create_time = models.DateTimeField(auto_now_add=True)
+    update_time = models.DateTimeField(null=True,auto_now=True)
+    category_name = models.ForeignKey('Category', on_delete=models.RESTRICT)
+    tag_name = models.ManyToManyField('Tag')
+    repost_num = models.IntegerField(default=0)
+    page_view=models.IntegerField(default=0)
+    is_public = models.SmallIntegerField(default=1)
+    comment_num = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'public_article'
+        managed = False
+
+
+
 
 class CommentManager(models.Manager):
     def create(self,**kwargs):
-        article = kwargs.get('article',None)
-        if article:
-            article.comment_num += 1
-            article.save()
-            print("文章评论数量++")
+        # article = kwargs.get('article',None)
+        # if article:
+        #     article.comment_num += 1
+        #     article.save()
+        #     print("文章评论数量++")
         return super(CommentManager, self).create(**kwargs)
-
-    def delete(self,**kwargs):
-        article = kwargs.get('article', None)
-        if article:
-            article.comment_num -= 1
-            article.save()
-        return super(CommentManager, self).delete(**kwargs)
 
 
 class Comment(models.Model):

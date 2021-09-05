@@ -25,7 +25,6 @@ urlpatterns = [
     path('browser_record/', views.BrowseRecordQuery.as_view()),
     path('upload_file/', views.upload_file),
     path('listArchives/', views.ArticleArchiveView.as_view()),
-
     path('list/', views.ArticleList.as_view()),
-    path('create/', views.ArticleCreate.as_view())
+    path('create/', views.ArticleCreate.as_view()),
 ]
