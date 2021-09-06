@@ -3,6 +3,7 @@ from .models import  BlogUser
 from django.contrib.auth.hashers import make_password
 
 class ChangeInfoSerializer(serializers.ModelSerializer):
+    birthday = serializers.DateTimeField(required=False)
     class Meta:
         model = BlogUser
         fields = ('birthday','password')

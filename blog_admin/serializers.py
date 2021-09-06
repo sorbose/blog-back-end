@@ -22,6 +22,14 @@ class UserSerializer(serializers.ModelSerializer):
         exclude = ('password', 'first_name', 'last_name', 'is_staff', 'groups', 'user_permissions')
 
 class BrowserSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    article = serializers.SerializerMethodField()
+    time = serializers.DateTimeField(format='%Y-%m-%d %H:%M:%S')
+    def get_user(self, obj):
+        return obj.user.username
+    def get_article(self, obj):
+        return obj.article.title
+
     class Meta:
         model = BrowseRecord
         fields = '__all__'

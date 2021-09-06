@@ -311,7 +311,8 @@ class ArticleBrowseView(View):
         if req.user.is_authenticated:
             user = req.user
         else:
-            user = None
+            user = BlogUser.objects.get(username='anonymous')
+
         if int(article[0].is_public) != 1 and article[0].author != user and not user.is_superuser:
             return JSONCORS(True, {'data': '', 'msg': '作者设置了仅自己可见'})
         BrowseRecord.objects.create(user=user, ip=get_ip_address(req), article=article[0], time=now)
@@ -600,7 +601,7 @@ class ArticleList(generics.ListAPIView):
 class ArticleCreate(generics.CreateAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleDetailSerializer
-    permission_classes = (permissions.IsAuthenticated)
+    permission_classes = (permissions.IsAuthenticated,)
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
