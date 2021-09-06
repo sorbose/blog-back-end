@@ -194,10 +194,10 @@ class ArticleCreateView(View):
         tags = Tag.objects.filter(name__in=tags_name)
 
         article = Article.objects.create(title=title, author=req.user,
-                          summary=req.POST.get('summary'), content_HTML=req.POST.get('content_HTML'),
-                          content=req.POST.get('content'), create_time=now,
-                          category_name=category,
-                          is_public=is_public)
+                                         summary=req.POST.get('summary'), content_HTML=req.POST.get('content_HTML'),
+                                         content=req.POST.get('content'), create_time=now,
+                                         category_name=category,
+                                         is_public=is_public)
         article.tag_name.set(tags)
         for i in range(len(tags)):
             tags[i].update_number_with_this(1)
@@ -317,7 +317,8 @@ class ArticleBrowseView(View):
         BrowseRecord.objects.create(user=user, ip=get_ip_address(req), article=article[0], time=now)
         article[0].page_view += 1
         article[0].save()
-        return JSONCORS(True, {'data': json.loads(serializers.serialize("json", article,use_natural_foreign_keys=True, use_natural_primary_keys=True))})
+        return JSONCORS(True, {'data': json.loads(
+            serializers.serialize("json", article, use_natural_foreign_keys=True, use_natural_primary_keys=True))})
 
 
 class Auther_ArticleQueryView(View):
@@ -387,8 +388,8 @@ class AdvancedSearchArticlesView(View):
             conditions[field] = req.GET[field]
         sort_fields = tuple(req.GET.get('sort', '').split(';'))
         objs = Article.objects.filter(**conditions).filter(djQ(is_public=1) | djQ(author=req.user))
-        if sort_fields[0]!='':
-            objs=objs.order_by(*sort_fields)
+        if sort_fields[0] != '':
+            objs = objs.order_by(*sort_fields)
 
         page = int(req.GET.get('page', 1))
         num = int(req.GET.get('num', 5))
@@ -398,12 +399,13 @@ class AdvancedSearchArticlesView(View):
         except PageNotAnInteger:
             res = paginator.page(1)
         except (EmptyPage, InvalidPage):
-            res= {}
+            res = {}
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", res))})
 
+
 class ArticleArchiveView(View):
-    def get(self,req:HttpRequest):
-        aas=ArticleArchive.objects.all()
+    def get(self, req: HttpRequest):
+        aas = ArticleArchive.objects.all()
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", aas))})
 
 
@@ -427,7 +429,7 @@ class CommentCreate(View):
             # return JSONCORS(False, {'msg': str(e)})
         try:
             com = Comment.objects.create(article=article, content=content, date=now, reply_to=reply_to, username=user,
-                                         level=level,toUser=toUser)
+                                         level=level, toUser=toUser)
         except IntegrityError as e:
             return JSONCORS(False, {'msg': str(e)})
         return JSONCORS(True, {'data': {'article_id': article_id, 'comment_id': com.id}})
@@ -473,23 +475,23 @@ class CommentQuery(View):
             res = []
             comments = Comment.objects.filter(article__id=article_id).order_by('-date')
             for comment in comments:
-                if comment.level!=0:
+                if comment.level != 0:
                     continue
                 obj = {
-                    'author':{
-                        'id':str(comment.username.id),
-                        'nickname':str(comment.username.username),
-                        'avatar':str(comment.username.avatar.url)
+                    'author': {
+                        'id': str(comment.username.id),
+                        'nickname': str(comment.username.username),
+                        'avatar': str(comment.username.avatar.url)
                     },
-                    'content':str(comment.content),
-                    'createDate':str(comment.date),
-                    'id':comment.id,
-                    'level':comment.level,
-                    'childrens':[]
+                    'content': str(comment.content),
+                    'createDate': str(comment.date),
+                    'id': comment.id,
+                    'level': comment.level,
+                    'childrens': []
                 }
                 res.append(obj)
             for comment in comments:
-                if comment.level==0:
+                if comment.level == 0:
                     continue
                 obj = {
                     'author': {
@@ -503,11 +505,11 @@ class CommentQuery(View):
                     'childrens': []
                 }
                 for i in res:
-                    if i['id']==comment.reply_to.id:
-                        if comment.level==2:
+                    if i['id'] == comment.reply_to.id:
+                        if comment.level == 2:
                             obj['toUser'] = {
-                                'id':str(comment.toUser.id),
-                                'nickname':str(comment.toUser.username)
+                                'id': str(comment.toUser.id),
+                                'nickname': str(comment.toUser.username)
                             }
                         i['childrens'].append(obj)
                         break
@@ -547,6 +549,7 @@ class BrowseRecordQuery(View):
         brs = BrowseRecord.objects.filter(**conditions)
         return JSONCORS(True, {'data': json.loads(serializers.serialize("json", brs))})
 
+
 def generate_random_str(randomlength=8):
     random_str = ''
     base_str = 'ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789'
@@ -555,12 +558,13 @@ def generate_random_str(randomlength=8):
         random_str += base_str[random.randint(0, length)]
     return random_str
 
+
 @transaction.atomic
-def upload_file(request:HttpRequest):
+def upload_file(request: HttpRequest):
     if request.method == "POST":
         myFile = request.FILES.get("image", None)
 
-        path = os.path.join("static/media/article_img", generate_random_str()+'_'+myFile.name)
+        path = os.path.join("static/media/article_img", generate_random_str() + '_' + myFile.name)
         destination = open(path, 'wb+')  # 打开特定的文件进行二进制的写操作
         for chunk in myFile.chunks():
             destination.write(chunk)
@@ -568,21 +572,21 @@ def upload_file(request:HttpRequest):
         return JSONCORS(True, {'path': path})
 
 
-
-
-
 from .serializers import ArticleListSerializer, ArticleDetailSerializer
 from .pagination import ArticleListPagination
 from .filter import ArticleFilter
 from blog_admin.views import Success
 from rest_framework import permissions
+
+
 class ArticleList(generics.ListAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleListSerializer
     filter_class = ArticleFilter
-    search_fields = ('title','content','author__username','tag_name__name')
-    ordering_fields = ('create_time','page_view')
+    search_fields = ('title', 'content', 'author__username', 'tag_name__name')
+    ordering_fields = ('create_time', 'page_view')
     pagination_class = ArticleListPagination
+
     def get(self, request, *args, **kwargs):
         author = self.request.query_params.get('author', None)
         if self.request.query_params.get('author', None):
@@ -591,7 +595,6 @@ class ArticleList(generics.ListAPIView):
         else:
             self.queryset = Article.objects.filter(is_public=1)
         return Success(super(ArticleList, self).get(request, *args, **kwargs))
-
 
 
 class ArticleCreate(generics.CreateAPIView):

@@ -48,7 +48,7 @@ class ArticleDelete(generics.DestroyAPIView):
 
 
 class UserList(generics.ListCreateAPIView):
-    queryset = BlogUser.objects.all()
+    queryset = BlogUser.objects.filter(is_active=1)
     serializer_class = serializers.UserSerializer
     search_fields = ('username', 'email', 'date_joined')
     permission_classes = (permissions.IsAdminUser,)
@@ -56,11 +56,15 @@ class UserList(generics.ListCreateAPIView):
     def get(self, request, *args, **kwargs):
         return Success(super(UserList, self).get(request, *args, **kwargs))
 
-
+from rest_framework import status
 class UserDelete(generics.DestroyAPIView):
     permission_classes = (permissions.IsAdminUser,)
     queryset = BlogUser.objects.all()
-    
+    def delete(self, request, *args, **kwargs):
+        obj = BlogUser.objects.get(*args,**kwargs)
+        obj.is_active = 0
+        obj.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class BrowserList(generics.ListAPIView):
@@ -76,7 +80,6 @@ class BrowserList(generics.ListAPIView):
 class BrowserDelete(generics.DestroyAPIView):
     queryset = BrowseRecord.objects.all()
     permission_classes = (permissions.IsAdminUser,)
-
 
 def delete_zero(request):
     if request.method == 'DELETE':

@@ -1,5 +1,7 @@
 import json
 import os
+import string
+import random
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.middleware.csrf import get_token
@@ -208,12 +210,18 @@ def create_users(request: HttpRequest):
     if not is_superuser(request):
         return HttpResponseForbidden("<h1>403 Forbidden.</h1>You are not an administrator."
                                      , headers={'Access-Control-Allow-Origin': '*'}, content_type="text/html")
-    try:
-        body = request.body.decode("utf-8").replace("'", '"')
-        json_data = json.loads(body)
-    except json.decoder.JSONDecodeError:
-        return HttpResponseBadRequest("json.decoder.JSONDecodeError", content_type="text/plain"
-                                      , headers={'Access-Control-Allow-Origin': '*'})
+    prefix = request.POST.get('prefix')
+    size = int(request.POST.get('size',default=10))
+    default_password = request.POST.get('default_password', default=123456)
+    def random_strings(size=8, chars=string.ascii_uppercase + string.digits + string.ascii_lowercase):
+        return ''.join(random.choice(chars) for _ in range(size))
+    json_data = []
+    for i in range(size):
+        obj = {}
+        obj['username'] = prefix+'_'+random_strings()
+        obj['password'] = default_password
+        json_data.append(obj)
+
     objs = (BlogUser(username=a.get("username"), password=make_password(a.get("password")),
                      email=a.get("email") if a.get("email") is not None else 'null',
                      is_staff=a.get("is_staff") if a.get("is_staff") is not None else False,
