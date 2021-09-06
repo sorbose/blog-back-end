@@ -588,10 +588,9 @@ class ArticleList(generics.ListAPIView):
     pagination_class = ArticleListPagination
 
     def get(self, request, *args, **kwargs):
-        author = self.request.query_params.get('author', None)
-        if self.request.query_params.get('author', None):
-            if author == self.request.user.id:
-                self.queryset = Article.objects.all()
+        author=request.user
+        if author.id==self.request.user.id:
+            self.queryset = Article.objects.all()
         else:
             self.queryset = Article.objects.filter(is_public=1)
         return Success(super(ArticleList, self).get(request, *args, **kwargs))
@@ -600,7 +599,7 @@ class ArticleList(generics.ListAPIView):
 class ArticleCreate(generics.CreateAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleDetailSerializer
-    permission_classes = (permissions.IsAuthenticated)
+    permission_classes = (permissions.IsAuthenticated,)
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):

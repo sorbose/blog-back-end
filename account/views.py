@@ -146,7 +146,8 @@ def delete_user(request: HttpRequest):
             {'success': 'False', 'errcode': 1, 'msg': 'Are you sure to delete your account?', 'username': username})
     user = BlogUser.objects.get(username=username)
     logout(request)
-    user.delete()
+    user.is_active=False
+    user.save()
     return JSONCORS({'success': 'True', 'msg': 'Delete user successfully'})
 
 def change_account_inf(req:HttpRequest):
