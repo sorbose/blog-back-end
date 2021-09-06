@@ -589,11 +589,16 @@ class ArticleList(generics.ListAPIView):
     pagination_class = ArticleListPagination
 
     def get(self, request, *args, **kwargs):
-        author=request.user
-        if author.id==self.request.user.id:
+        if request.user.is_superuser:
             self.queryset = Article.objects.all()
         else:
-            self.queryset = Article.objects.filter(is_public=1)
+            self.queryset=Article.objects.filter(djQ(is_public=1)|djQ(author=request.user.id))
+        # author=request.user
+        # print(author.id,self.request.user.id)
+        # if author.id==self.request.user.id:
+        #     self.queryset = Article.objects.all()
+        # else:
+        #     self.queryset = Article.objects.filter(is_public=1)
         return Success(super(ArticleList, self).get(request, *args, **kwargs))
 
 
